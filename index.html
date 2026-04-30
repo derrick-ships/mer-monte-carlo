@@ -3,29 +3,56 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b1220" />
-  <title>MER Monte Carlo</title>
+  <meta name="theme-color" content="#0A0A0A" />
+  <title>Δ MER Monte Carlo — Delta</title>
+  <meta name="description" content="A decision instrument for paid-media operators. Distributions over point estimates. Reproducible by seed. Runs locally." />
   <link rel="manifest" href="./manifest.json" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="./src/styles.css" />
 </head>
 <body>
   <header>
-    <h1>MER Monte Carlo</h1>
-    <button id="theme-toggle" aria-label="Toggle theme">Theme</button>
-  </header>
-  <main>
-    <div id="tabs" role="tablist">
-      <button role="tab" data-tab="quick">Quick MER</button>
-      <button role="tab" data-tab="funnel">Funnel</button>
-      <button role="tab" data-tab="mc">Monte Carlo</button>
+    <span class="meta meta-left">DELTA / MER / V1.0</span>
+    <div>
+      <h1><span class="delta">Δ</span>MER Monte Carlo</h1>
+      <span class="tag">Distributions over point estimates</span>
     </div>
+    <div class="meta-right">
+      <span class="meta" aria-hidden="true">LOCAL · OFFLINE · REPRODUCIBLE</span>
+      <button id="theme-toggle" class="icon-btn" aria-label="Toggle light or dark theme">Theme</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="tabs" role="tablist" aria-label="Calculator views">
+      <button role="tab" data-tab="quick" aria-selected="true">
+        <span class="tab-num">01</span>
+        <span>Quick MER</span>
+      </button>
+      <button role="tab" data-tab="funnel" aria-selected="false">
+        <span class="tab-num">02</span>
+        <span>Funnel</span>
+      </button>
+      <button role="tab" data-tab="mc" aria-selected="false">
+        <span class="tab-num">03</span>
+        <span>Monte Carlo</span>
+      </button>
+    </div>
+
     <section data-panel="quick" role="tabpanel" aria-labelledby="quick"></section>
     <section data-panel="funnel" role="tabpanel" aria-labelledby="funnel" hidden></section>
     <section data-panel="mc" role="tabpanel" aria-labelledby="mc" hidden></section>
   </main>
+
   <footer>
-    Distributions over point estimates. All math runs locally in your browser. Reproducible by seed.
+    <span class="meta meta-left">DELTA / © 2026</span>
+    <span class="meta-center principle">All math runs locally. No telemetry. No backend.</span>
+    <span class="meta meta-right">SEED · RUN · SHARE</span>
   </footer>
+
   <script type="module" src="./src/main.ts"></script>
 </body>
 </html>
