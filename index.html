@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <title>MER Monte Carlo</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="stylesheet" href="./src/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>MER Monte Carlo</h1>
+    <button id="theme-toggle" aria-label="Toggle theme">Theme</button>
+  </header>
+  <main>
+    <div id="tabs" role="tablist">
+      <button role="tab" data-tab="quick">Quick MER</button>
+      <button role="tab" data-tab="funnel">Funnel</button>
+      <button role="tab" data-tab="mc">Monte Carlo</button>
+    </div>
+    <section data-panel="quick" role="tabpanel" aria-labelledby="quick"></section>
+    <section data-panel="funnel" role="tabpanel" aria-labelledby="funnel" hidden></section>
+    <section data-panel="mc" role="tabpanel" aria-labelledby="mc" hidden></section>
+  </main>
+  <footer>
+    Distributions over point estimates. All math runs locally in your browser. Reproducible by seed.
+  </footer>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

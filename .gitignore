@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.DS_Store
+.env*
+*.log
+.vscode/
+.idea/
+coverage/
+.vite/
+*.timestamp-*.mjs
+.serena/
+*.timestamp-*.mjs
+.serena/
