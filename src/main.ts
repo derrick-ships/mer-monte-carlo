@@ -22,7 +22,13 @@ import { setupTabs } from './ui/tabs.js';
 import { renderResults } from './ui/results.js';
 import { drawHistogram } from './ui/histogram.js';
 import { drawTornado } from './ui/tornado.js';
-import { renderDistField, renderNumericInput, FUNNEL_FIELDS } from './ui/inputs.js';
+import {
+  renderDistField,
+  renderNumericInput,
+  FUNNEL_FIELDS,
+  affixesFor,
+} from './ui/inputs.js';
+import { GLOSSARY } from './ui/glossary.js';
 import { fmtMER, fmtMoneyCents, fmtMoneyCentsPrecise, fmtPercent, dollarsToCents } from './ui/format.js';
 import { registerServiceWorker } from './pwa/register-sw.js';
 import {
@@ -65,9 +71,34 @@ const state: AppState = {
 const restored = decodeStateFromHash(location.hash);
 if (restored) state.cfg = restored;
 
+// ---------- Helpers ----------
+function sectionHead(parent: HTMLElement, title: string, lede: string, meta: string): void {
+  const head = document.createElement('div');
+  head.className = 'section-head';
+  head.innerHTML = `
+    <h2>${escapeHtml(title)}</h2>
+    <span class="meta">${escapeHtml(meta)}</span>
+  `;
+  parent.appendChild(head);
+  if (lede) {
+    const p = document.createElement('p');
+    p.className = 'section-lede';
+    p.textContent = lede;
+    parent.appendChild(p);
+  }
+}
+
 // ---------- Quick MER tab ----------
 function renderQuickTab(root: HTMLElement): void {
   root.replaceChildren();
+
+  sectionHead(
+    root,
+    'Quick MER',
+    'A point estimate. Type your numbers and see your current efficiency, your break-even, and the MER you would need to clear a profit target. No simulation — just the formulas.',
+    '01 / POINT ESTIMATE',
+  );
+
   const inputs = document.createElement('div');
   inputs.className = 'inputs';
   root.appendChild(inputs);
@@ -105,40 +136,71 @@ function renderQuickTab(root: HTMLElement): void {
     }
     out.innerHTML = `
       <div class="hero">
-        <div class="hero-stat"><div class="label">Current MER</div><div class="value">${fmtMER(mer)}</div></div>
-        <div class="hero-stat"><div class="label">Spend rate</div><div class="value">${fmtPercent(spendRate)}</div></div>
-        <div class="hero-stat"><div class="label">Net profit</div><div class="value">${fmtMoneyCentsPrecise(netProfit)}</div></div>
+        <div class="hero-stat">
+          <div class="label">Current MER</div>
+          <div class="value accent">${fmtMER(mer)}</div>
+          <div class="def">${escapeHtml(GLOSSARY.mer.short)}</div>
+        </div>
+        <div class="hero-stat">
+          <div class="label">Spend rate</div>
+          <div class="value">${fmtPercent(spendRate)}</div>
+          <div class="def">${escapeHtml(GLOSSARY.spendRate.short)}</div>
+        </div>
+        <div class="hero-stat">
+          <div class="label">Net profit</div>
+          <div class="value">${fmtMoneyCentsPrecise(netProfit)}</div>
+          <div class="def">${escapeHtml(GLOSSARY.netProfit.short)}</div>
+        </div>
       </div>
-      <table class="range-table">
-        <tbody>
-          <tr><td>Contribution profit</td><td>${fmtMoneyCentsPrecise(contribProfit)}</td></tr>
-          <tr><td>Break-even MER (CM only)</td><td>${fmtMER(beMER)}</td></tr>
-          <tr><td>Break-even MER w/ fixed</td><td>${fmtMER(beMERFixed)}</td></tr>
-          <tr><td>Required MER for target profit</td><td>${fmtMER(reqMER)}</td></tr>
-        </tbody>
-      </table>
+      <div class="chart-block">
+        <h3>Break-evens and required MER</h3>
+        <p>The minimum MER you need to cover costs (break-even) and the MER you would need to clear your target profit.</p>
+        <table class="range-table">
+          <tbody>
+            <tr><td>Contribution profit <span class="muted">(after product cost)</span></td><td>${fmtMoneyCentsPrecise(contribProfit)}</td></tr>
+            <tr><td>Break-even MER <span class="muted">(margin only)</span></td><td>${fmtMER(beMER)}</td></tr>
+            <tr><td>Break-even MER <span class="muted">(with fixed costs)</span></td><td>${fmtMER(beMERFixed)}</td></tr>
+            <tr><td>Required MER for target profit</td><td>${fmtMER(reqMER)}</td></tr>
+          </tbody>
+        </table>
+      </div>
     `;
   }
 
-  renderNumericInput(inputs, 'q-rev', 'Revenue ($)', local.revenueDollars, (v) => {
+  renderNumericInput(inputs, 'q-rev', 'Net revenue', local.revenueDollars, (v) => {
     local.revenueDollars = v;
     recompute();
+  }, {
+    glossaryKey: 'netRevenue',
+    affix: { prefix: '$', suffix: 'USD' },
   });
-  renderNumericInput(inputs, 'q-spend', 'Marketing spend ($)', local.spendDollars, (v) => {
+  renderNumericInput(inputs, 'q-spend', 'Ad spend', local.spendDollars, (v) => {
     local.spendDollars = v;
     recompute();
+  }, {
+    glossaryKey: 'spend',
+    affix: { prefix: '$', suffix: 'USD' },
   });
   renderNumericInput(inputs, 'q-cm', 'Contribution margin', local.cm, (v) => {
     local.cm = v;
     recompute();
-  }, '0..1 decimal');
-  renderNumericInput(inputs, 'q-fixed', 'Fixed costs ($)', local.fixedDollars, (v) => {
+  }, {
+    glossaryKey: 'contributionMargin',
+    affix: { suffix: '0–1' },
+  });
+  renderNumericInput(inputs, 'q-fixed', 'Fixed costs', local.fixedDollars, (v) => {
     local.fixedDollars = v;
     recompute();
+  }, {
+    glossaryKey: 'fixedCosts',
+    affix: { prefix: '$', suffix: 'USD' },
   });
-  renderNumericInput(inputs, 'q-target', 'Target profit ($)', local.targetProfitDollars, (v) => {
+  renderNumericInput(inputs, 'q-target', 'Target profit', local.targetProfitDollars, (v) => {
     local.targetProfitDollars = v;
     recompute();
+  }, {
+    glossaryKey: 'targetProfit',
+    affix: { prefix: '$', suffix: 'USD' },
   });
 
   recompute();
@@ -147,6 +209,14 @@ function renderQuickTab(root: HTMLElement): void {
 // ---------- Funnel tab ----------
 function renderFunnelTab(root: HTMLElement): void {
   root.replaceChildren();
+
+  sectionHead(
+    root,
+    'Funnel',
+    'A deterministic walk through the funnel: spend buys clicks, clicks convert, orders generate revenue. Useful for sanity-checking a single scenario before turning it into a Monte Carlo.',
+    '02 / FUNNEL CHAIN',
+  );
+
   const inputs = document.createElement('div');
   inputs.className = 'inputs';
   root.appendChild(inputs);
@@ -179,37 +249,63 @@ function renderFunnelTab(root: HTMLElement): void {
     } catch (_e) { /* swallow */ }
     out.innerHTML = `
       <div class="hero">
-        <div class="hero-stat"><div class="label">MER</div><div class="value">${fmtMER(r.mer)}</div></div>
-        <div class="hero-stat"><div class="label">Net profit</div><div class="value">${fmtMoneyCents(r.netProfitCents)}</div></div>
-        <div class="hero-stat"><div class="label">CAC</div><div class="value">${r.cacCents == null ? '—' : fmtMoneyCents(r.cacCents)}</div></div>
+        <div class="hero-stat">
+          <div class="label">MER</div>
+          <div class="value accent">${fmtMER(r.mer)}</div>
+          <div class="def">${escapeHtml(GLOSSARY.mer.short)}</div>
+        </div>
+        <div class="hero-stat">
+          <div class="label">Net profit</div>
+          <div class="value">${fmtMoneyCents(r.netProfitCents)}</div>
+          <div class="def">${escapeHtml(GLOSSARY.netProfit.short)}</div>
+        </div>
+        <div class="hero-stat">
+          <div class="label">CAC</div>
+          <div class="value">${r.cacCents == null ? '—' : fmtMoneyCents(r.cacCents)}</div>
+          <div class="def">${escapeHtml(GLOSSARY.cac.short)}</div>
+        </div>
       </div>
-      <table class="range-table">
-        <tbody>
-          <tr><td>Clicks</td><td>${r.clicks.toFixed(0)}</td></tr>
-          <tr><td>Orders</td><td>${r.orders.toFixed(1)}</td></tr>
-          <tr><td>Gross revenue</td><td>${fmtMoneyCents(r.grossRevenueCents)}</td></tr>
-          <tr><td>Net revenue</td><td>${fmtMoneyCents(r.netRevenueCents)}</td></tr>
-          <tr><td>Contribution profit</td><td>${fmtMoneyCents(r.contribProfitCents)}</td></tr>
-          <tr><td>Break-even MER</td><td>${fmtMER(beMER)}</td></tr>
-          <tr><td>Break-even MER (with fixed)</td><td>${fmtMER(beMERFixed)}</td></tr>
-          <tr><td>Required MER for target</td><td>${fmtMER(reqMER)}</td></tr>
-        </tbody>
-      </table>
-      <p class="muted">Identity: MER = (CVR × AOV × (1 − refund)) / CPC = ${fmtMER(
-        (f.cvr * f.aovCents * (1 - f.refundRate)) / f.cpcCents,
-      )}</p>
+      <div class="chart-block">
+        <h3>Funnel chain</h3>
+        <p>Each row follows from the row above. If something looks off, work backwards from the suspicious number.</p>
+        <table class="range-table">
+          <tbody>
+            <tr><td>Clicks</td><td>${r.clicks.toFixed(0)}</td></tr>
+            <tr><td>Orders</td><td>${r.orders.toFixed(1)}</td></tr>
+            <tr><td>Gross revenue <span class="muted">(before refunds)</span></td><td>${fmtMoneyCents(r.grossRevenueCents)}</td></tr>
+            <tr><td>Net revenue <span class="muted">(after refunds)</span></td><td>${fmtMoneyCents(r.netRevenueCents)}</td></tr>
+            <tr><td>Contribution profit <span class="muted">(after product cost)</span></td><td>${fmtMoneyCents(r.contribProfitCents)}</td></tr>
+            <tr><td>Break-even MER</td><td>${fmtMER(beMER)}</td></tr>
+            <tr><td>Break-even MER <span class="muted">(with fixed costs)</span></td><td>${fmtMER(beMERFixed)}</td></tr>
+            <tr><td>Required MER for target profit</td><td>${fmtMER(reqMER)}</td></tr>
+          </tbody>
+        </table>
+        <p class="muted" style="font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;">
+          Identity check: MER = (CVR × AOV × (1 − refund)) / CPC = ${fmtMER(
+            (f.cvr * f.aovCents * (1 - f.refundRate)) / f.cpcCents,
+          )}
+        </p>
+      </div>
     `;
   }
 
-  // Simple inputs in dollars/decimals; convert to cents on update.
-  renderNumericInput(inputs, 'f-spend', 'Spend ($)', f.spendCents / 100, (v) => { f.spendCents = dollarsToCents(v); recompute(); });
-  renderNumericInput(inputs, 'f-cpc', 'CPC ($)', f.cpcCents / 100, (v) => { f.cpcCents = dollarsToCents(v); recompute(); });
-  renderNumericInput(inputs, 'f-cvr', 'CVR', f.cvr, (v) => { f.cvr = v; recompute(); }, '0..1');
-  renderNumericInput(inputs, 'f-aov', 'AOV ($)', f.aovCents / 100, (v) => { f.aovCents = dollarsToCents(v); recompute(); });
-  renderNumericInput(inputs, 'f-refund', 'Refund rate', f.refundRate, (v) => { f.refundRate = v; recompute(); }, '0..<1');
-  renderNumericInput(inputs, 'f-cm', 'Contribution margin', f.contributionMargin, (v) => { f.contributionMargin = v; recompute(); }, '0..1');
-  renderNumericInput(inputs, 'f-fixed', 'Fixed costs ($)', f.fixedCostsCents / 100, (v) => { f.fixedCostsCents = dollarsToCents(v); recompute(); });
-  renderNumericInput(inputs, 'f-target', 'Target profit ($)', f.targetProfitCents / 100, (v) => { f.targetProfitCents = dollarsToCents(v); recompute(); });
+  // Input row: dollars/decimals on the surface; cents under the hood.
+  renderNumericInput(inputs, 'f-spend', 'Ad spend', f.spendCents / 100, (v) => { f.spendCents = dollarsToCents(v); recompute(); },
+    { glossaryKey: 'spend', affix: affixesFor('money') });
+  renderNumericInput(inputs, 'f-cpc', 'Cost per click', f.cpcCents / 100, (v) => { f.cpcCents = dollarsToCents(v); recompute(); },
+    { glossaryKey: 'cpc', affix: affixesFor('money') });
+  renderNumericInput(inputs, 'f-cvr', 'Conversion rate', f.cvr, (v) => { f.cvr = v; recompute(); },
+    { glossaryKey: 'cvr', affix: affixesFor('rate') });
+  renderNumericInput(inputs, 'f-aov', 'Average order value', f.aovCents / 100, (v) => { f.aovCents = dollarsToCents(v); recompute(); },
+    { glossaryKey: 'aov', affix: affixesFor('money') });
+  renderNumericInput(inputs, 'f-refund', 'Refund rate', f.refundRate, (v) => { f.refundRate = v; recompute(); },
+    { glossaryKey: 'refundRate', affix: affixesFor('rate') });
+  renderNumericInput(inputs, 'f-cm', 'Contribution margin', f.contributionMargin, (v) => { f.contributionMargin = v; recompute(); },
+    { glossaryKey: 'contributionMargin', affix: affixesFor('rate') });
+  renderNumericInput(inputs, 'f-fixed', 'Fixed costs', f.fixedCostsCents / 100, (v) => { f.fixedCostsCents = dollarsToCents(v); recompute(); },
+    { glossaryKey: 'fixedCosts', affix: affixesFor('money') });
+  renderNumericInput(inputs, 'f-target', 'Target profit', f.targetProfitCents / 100, (v) => { f.targetProfitCents = dollarsToCents(v); recompute(); },
+    { glossaryKey: 'targetProfit', affix: affixesFor('money') });
 
   recompute();
 }
@@ -218,15 +314,38 @@ function renderFunnelTab(root: HTMLElement): void {
 function renderMonteCarloTab(root: HTMLElement): void {
   root.replaceChildren();
 
+  sectionHead(
+    root,
+    'Monte Carlo',
+    'Tell the simulator a range for each uncertain input and it runs thousands of possible futures. The headline is not the average — it is your probability of clearing your target.',
+    '03 / DISTRIBUTIONS',
+  );
+
   const inputsWrap = document.createElement('div');
   inputsWrap.className = 'inputs';
   root.appendChild(inputsWrap);
 
-  // Preset selector
+  // Preset selector — full field
   const presetWrap = document.createElement('label');
   presetWrap.className = 'field';
-  presetWrap.innerHTML = '<span>Preset</span>';
+  const presetLabel = document.createElement('span');
+  presetLabel.className = 'field-label';
+  presetLabel.textContent = 'Industry preset';
+  presetWrap.appendChild(presetLabel);
+  const presetDef = document.createElement('p');
+  presetDef.className = 'field-def';
+  presetDef.textContent = 'Pre-tuned starting points by channel and category. Pick one near your business, then adjust.';
+  presetWrap.appendChild(presetDef);
+  const presetShell = document.createElement('div');
+  presetShell.className = 'input-shell';
+  presetShell.style.gridTemplateColumns = '1fr';
   const presetSelect = document.createElement('select');
+  presetSelect.style.width = '100%';
+  presetSelect.style.border = '0';
+  presetSelect.style.background = 'transparent';
+  presetSelect.style.color = 'inherit';
+  presetSelect.style.font = 'inherit';
+  presetSelect.style.padding = '10px 12px';
   for (const p of PRESETS) {
     const o = document.createElement('option');
     o.value = p.id;
@@ -240,7 +359,8 @@ function renderMonteCarloTab(root: HTMLElement): void {
       renderMonteCarloTab(root);
     }
   });
-  presetWrap.appendChild(presetSelect);
+  presetShell.appendChild(presetSelect);
+  presetWrap.appendChild(presetShell);
   inputsWrap.appendChild(presetWrap);
 
   // Distribution fields
@@ -254,14 +374,36 @@ function renderMonteCarloTab(root: HTMLElement): void {
     });
   }
 
-  renderNumericInput(inputsWrap, 'mc-target', 'Target MER', state.cfg.targetMER, (v) => { state.cfg.targetMER = v; });
-  renderNumericInput(inputsWrap, 'mc-tprofit', 'Target profit ($)', state.cfg.targetProfitCents / 100, (v) => { state.cfg.targetProfitCents = dollarsToCents(v); });
+  renderNumericInput(inputsWrap, 'mc-target', 'Target MER', state.cfg.targetMER, (v) => { state.cfg.targetMER = v; },
+    { glossaryKey: 'targetMER', affix: affixesFor('mer') });
+  renderNumericInput(inputsWrap, 'mc-tprofit', 'Target profit', state.cfg.targetProfitCents / 100, (v) => { state.cfg.targetProfitCents = dollarsToCents(v); },
+    { glossaryKey: 'targetProfit', affix: affixesFor('money') });
 
-  // Iteration selector
+  // Iterations as a select dressed up like our other shells
   const iterWrap = document.createElement('label');
   iterWrap.className = 'field';
-  iterWrap.innerHTML = '<span>Iterations</span>';
+  const iterLabel = document.createElement('span');
+  iterLabel.className = 'field-label';
+  iterLabel.textContent = 'Iterations';
+  iterWrap.appendChild(iterLabel);
+  const iterDef = document.createElement('p');
+  iterDef.className = 'field-def';
+  iterDef.textContent = GLOSSARY.iterations.short;
+  iterWrap.appendChild(iterDef);
+  const iterMeta = document.createElement('small');
+  iterMeta.className = 'field-meta';
+  iterMeta.textContent = `e.g., ${GLOSSARY.iterations.example ?? ''}`;
+  iterWrap.appendChild(iterMeta);
+  const iterShell = document.createElement('div');
+  iterShell.className = 'input-shell';
+  iterShell.style.gridTemplateColumns = '1fr auto';
   const iterSel = document.createElement('select');
+  iterSel.style.border = '0';
+  iterSel.style.background = 'transparent';
+  iterSel.style.color = 'inherit';
+  iterSel.style.font = 'inherit';
+  iterSel.style.fontFamily = 'var(--font-mono)';
+  iterSel.style.padding = '10px 12px';
   for (const n of [10_000, 50_000, 100_000, 200_000]) {
     const o = document.createElement('option');
     o.value = String(n);
@@ -272,17 +414,22 @@ function renderMonteCarloTab(root: HTMLElement): void {
   iterSel.addEventListener('change', () => {
     state.cfg.iterations = parseInt(iterSel.value, 10);
   });
-  iterWrap.appendChild(iterSel);
+  iterShell.appendChild(iterSel);
+  const iterAffix = document.createElement('span');
+  iterAffix.className = 'affix suffix';
+  iterAffix.textContent = 'RUNS';
+  iterShell.appendChild(iterAffix);
+  iterWrap.appendChild(iterShell);
   inputsWrap.appendChild(iterWrap);
 
   // Seed input
   renderNumericInput(
-    // We re-use the numeric helper as an opaque text-y input by setting a string seed via custom handling.
     inputsWrap,
     'mc-seed',
-    'Seed (deterministic)',
+    'Seed',
     parseInt(state.cfg.seed.replace(/\D/g, '')) || 1,
     (v) => { state.cfg.seed = String(v); },
+    { glossaryKey: 'seed', affix: affixesFor('seed') },
   );
 
   // Action row
@@ -296,12 +443,18 @@ function renderMonteCarloTab(root: HTMLElement): void {
   actions.appendChild(runBtn);
 
   const shareBtn = document.createElement('button');
-  shareBtn.textContent = 'Share link';
+  shareBtn.textContent = 'Copy share link';
   actions.appendChild(shareBtn);
 
   const saveBtn = document.createElement('button');
   saveBtn.textContent = 'Save scenario';
   actions.appendChild(saveBtn);
+
+  const kbdHint = document.createElement('span');
+  kbdHint.className = 'meta';
+  kbdHint.style.marginLeft = 'auto';
+  kbdHint.innerHTML = '<span class="kbd">Enter</span> next tab · <span class="kbd">Esc</span> back';
+  actions.appendChild(kbdHint);
 
   // Output area
   const resultsEl = document.createElement('div');
@@ -310,17 +463,15 @@ function renderMonteCarloTab(root: HTMLElement): void {
 
   const histCanvas = document.createElement('canvas');
   histCanvas.className = 'chart';
-  histCanvas.style.height = '240px';
+  histCanvas.style.height = '260px';
   histCanvas.style.width = '100%';
 
   const tornadoCanvas = document.createElement('canvas');
   tornadoCanvas.className = 'chart';
-  tornadoCanvas.style.height = '220px';
+  tornadoCanvas.style.height = '240px';
   tornadoCanvas.style.width = '100%';
 
-  // Worker
-  // DECISION: lazy-create the worker on first run rather than at module load,
-  // so PWA users who only browse Quick MER never spin up a worker.
+  // Worker — lazy create on first run.
   let worker: Worker | null = null;
   function getWorker(): Worker {
     if (!worker) {
@@ -341,23 +492,49 @@ function renderMonteCarloTab(root: HTMLElement): void {
         const result = (msg as unknown as { result: SimResult }).result;
         state.lastResult = result;
         renderResults(resultsEl, result, state.cfg.targetMER, requiredMERSafe());
-        // Append charts after results
-        resultsEl.appendChild(histCanvas);
-        resultsEl.appendChild(tornadoCanvas);
+
+        // Histogram block
+        const histBlock = document.createElement('div');
+        histBlock.className = 'chart-block';
+        histBlock.innerHTML = `
+          <h3>Distribution of MER outcomes</h3>
+          <p>Each bar counts how many simulated futures landed in that range. The dashed line marks your target.</p>
+        `;
+        histBlock.appendChild(histCanvas);
+        resultsEl.appendChild(histBlock);
+
+        // Tornado block
+        const tornadoBlock = document.createElement('div');
+        tornadoBlock.className = 'chart-block';
+        tornadoBlock.innerHTML = `
+          <h3>Sensitivity — which input matters most</h3>
+          <p>${escapeHtml(GLOSSARY.tornado.short)}</p>
+        `;
+        tornadoBlock.appendChild(tornadoCanvas);
+        resultsEl.appendChild(tornadoBlock);
+
         drawHistogram({
           canvas: histCanvas,
           data: result.mer,
           threshold: state.cfg.targetMER,
           thresholdLabel: `Target ${fmtMER(state.cfg.targetMER)}`,
-          axisLabel: 'MER distribution',
+          axisLabel: 'MER',
+          color: getCssVar('--fg'),
+          thresholdColor: getCssVar('--accent'),
         });
-        drawTornado({ canvas: tornadoCanvas, rows: result.tornado });
+        drawTornado({
+          canvas: tornadoCanvas,
+          rows: result.tornado,
+          posColor: getCssVar('--accent'),
+          negColor: getCssVar('--fg'),
+        });
+
         runBtn.disabled = false;
         runBtn.textContent = 'Run simulation';
         w.removeEventListener('message', handler);
       } else if (msg.type === 'error') {
         const err = (msg as unknown as { error: string }).error;
-        resultsEl.innerHTML = `<div class="integrity-warn">Simulation failed: ${err}</div>`;
+        resultsEl.innerHTML = `<div class="integrity-warn"><strong>Simulation failed.</strong><div>${escapeHtml(err)}</div></div>`;
         runBtn.disabled = false;
         runBtn.textContent = 'Run simulation';
         w.removeEventListener('message', handler);
@@ -373,14 +550,14 @@ function renderMonteCarloTab(root: HTMLElement): void {
     try {
       await navigator.clipboard.writeText(url);
       shareBtn.textContent = 'Link copied';
-      setTimeout(() => (shareBtn.textContent = 'Share link'), 1500);
+      setTimeout(() => (shareBtn.textContent = 'Copy share link'), 1500);
     } catch (_e) {
       location.hash = hash;
     }
   });
 
   saveBtn.addEventListener('click', async () => {
-    const name = prompt('Scenario name?');
+    const name = prompt('Name this scenario');
     if (!name) return;
     const headlineMedianMER = state.lastResult?.medianMER ?? Number.NaN;
     const stored: StoredScenario = {
@@ -408,13 +585,18 @@ function renderMonteCarloTab(root: HTMLElement): void {
     const items = await listScenarios();
     items.sort((a, b) => b.createdAt - a.createdAt);
     if (items.length === 0) {
-      list.innerHTML = '<p class="muted">None yet.</p>';
+      list.innerHTML = '<p class="muted" style="font-size: 13px;">No scenarios saved yet. Run a simulation, then click <em>Save scenario</em>.</p>';
       return;
     }
     for (const s of items) {
       const row = document.createElement('div');
       row.className = 'saved-row';
-      row.innerHTML = `<span>${escapeHtml(s.name)}</span><span class="muted">${new Date(s.createdAt).toLocaleDateString()} · median ${fmtMER(s.headlineMedianMER)}</span>`;
+      const nameEl = document.createElement('span');
+      nameEl.className = 'name';
+      nameEl.textContent = s.name;
+      const metaEl = document.createElement('span');
+      metaEl.className = 'meta-line';
+      metaEl.textContent = `${new Date(s.createdAt).toLocaleDateString()} · MEDIAN ${fmtMER(s.headlineMedianMER)}`;
       const load = document.createElement('button');
       load.textContent = 'Load';
       load.addEventListener('click', () => {
@@ -427,6 +609,8 @@ function renderMonteCarloTab(root: HTMLElement): void {
         await deleteScenario(s.id);
         void renderSavedList();
       });
+      row.appendChild(nameEl);
+      row.appendChild(metaEl);
       row.appendChild(load);
       row.appendChild(del);
       list.appendChild(row);
@@ -436,8 +620,11 @@ function renderMonteCarloTab(root: HTMLElement): void {
   void renderSavedList();
 }
 
+function getCssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 function requiredMERSafe(): number {
-  // Use the median spend if spend distribution is non-fixed.
   let spendCents = 0;
   if (state.cfg.spend.kind === 'fixed') spendCents = state.cfg.spend.value;
   else if (state.cfg.spend.kind === 'triangular') spendCents = state.cfg.spend.mode;
@@ -479,7 +666,7 @@ function boot(): void {
 
   tabs.setActive('quick');
 
-  // Theme toggle (system pref + manual)
+  // Theme toggle
   const themeBtn = document.querySelector<HTMLButtonElement>('#theme-toggle');
   themeBtn?.addEventListener('click', () => {
     const cur = document.documentElement.dataset.theme ?? '';
