@@ -11,3 +11,4 @@ coverage/
 .serena/
 *.timestamp-*.mjs
 .serena/
+.vercel
