@@ -95,7 +95,7 @@ function renderQuickTab(root: HTMLElement): void {
   sectionHead(
     root,
     'Quick MER',
-    'A point estimate. Type your numbers and see your current efficiency, your break-even, and the MER you would need to clear a profit target. No simulation — just the formulas.',
+    'Type your numbers. See your MER, your break-even, and the MER you need to clear your target. Just the formulas.',
     '01 / POINT ESTIMATE',
   );
 
@@ -153,8 +153,8 @@ function renderQuickTab(root: HTMLElement): void {
         </div>
       </div>
       <div class="chart-block">
-        <h3>Break-evens and required MER</h3>
-        <p>The minimum MER you need to cover costs (break-even) and the MER you would need to clear your target profit.</p>
+        <h3>Break-even and required MER</h3>
+        <p>Minimum MER to cover costs, and the MER needed for your target profit.</p>
         <table class="range-table">
           <tbody>
             <tr><td>Contribution profit <span class="muted">(after product cost)</span></td><td>${fmtMoneyCentsPrecise(contribProfit)}</td></tr>
@@ -213,7 +213,7 @@ function renderFunnelTab(root: HTMLElement): void {
   sectionHead(
     root,
     'Funnel',
-    'A deterministic walk through the funnel: spend buys clicks, clicks convert, orders generate revenue. Useful for sanity-checking a single scenario before turning it into a Monte Carlo.',
+    'Spend buys clicks. Clicks convert. Orders make revenue. Sanity-check one scenario before going Monte Carlo.',
     '02 / FUNNEL CHAIN',
   );
 
@@ -267,7 +267,7 @@ function renderFunnelTab(root: HTMLElement): void {
       </div>
       <div class="chart-block">
         <h3>Funnel chain</h3>
-        <p>Each row follows from the row above. If something looks off, work backwards from the suspicious number.</p>
+        <p>Each row follows from the one above. If something looks off, work backward from the suspicious number.</p>
         <table class="range-table">
           <tbody>
             <tr><td>Clicks</td><td>${r.clicks.toFixed(0)}</td></tr>
@@ -280,8 +280,8 @@ function renderFunnelTab(root: HTMLElement): void {
             <tr><td>Required MER for target profit</td><td>${fmtMER(reqMER)}</td></tr>
           </tbody>
         </table>
-        <p class="muted" style="font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;">
-          Identity check: MER = (CVR × AOV × (1 − refund)) / CPC = ${fmtMER(
+        <p class="muted" style="font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em;">
+          Check: MER = (CVR × AOV × (1 − refund)) / CPC = ${fmtMER(
             (f.cvr * f.aovCents * (1 - f.refundRate)) / f.cpcCents,
           )}
         </p>
@@ -317,7 +317,7 @@ function renderMonteCarloTab(root: HTMLElement): void {
   sectionHead(
     root,
     'Monte Carlo',
-    'Tell the simulator a range for each uncertain input and it runs thousands of possible futures. The headline is not the average — it is your probability of clearing your target.',
+    'Give a range for each uncertain input. The simulator runs thousands of futures. Headline is the probability of hitting your target — not the average.',
     '03 / DISTRIBUTIONS',
   );
 
@@ -334,7 +334,7 @@ function renderMonteCarloTab(root: HTMLElement): void {
   presetWrap.appendChild(presetLabel);
   const presetDef = document.createElement('p');
   presetDef.className = 'field-def';
-  presetDef.textContent = 'Pre-tuned starting points by channel and category. Pick one near your business, then adjust.';
+  presetDef.textContent = 'Starting points by channel. Pick the closest, then adjust.';
   presetWrap.appendChild(presetDef);
   const presetShell = document.createElement('div');
   presetShell.className = 'input-shell';
@@ -456,10 +456,11 @@ function renderMonteCarloTab(root: HTMLElement): void {
   kbdHint.innerHTML = '<span class="kbd">Enter</span> next tab · <span class="kbd">Esc</span> back';
   actions.appendChild(kbdHint);
 
-  // Output area
+  // Output area — starts in an empty state so the user knows what to do.
   const resultsEl = document.createElement('div');
   resultsEl.id = 'mc-results';
   root.appendChild(resultsEl);
+  renderEmptyState(resultsEl);
 
   const histCanvas = document.createElement('canvas');
   histCanvas.className = 'chart';
@@ -483,6 +484,7 @@ function renderMonteCarloTab(root: HTMLElement): void {
   runBtn.addEventListener('click', () => {
     runBtn.disabled = true;
     runBtn.textContent = 'Running…';
+    renderSkeleton(resultsEl);
     const w = getWorker();
     const id = String(Math.random()).slice(2);
     const handler = (e: MessageEvent): void => {
@@ -497,8 +499,8 @@ function renderMonteCarloTab(root: HTMLElement): void {
         const histBlock = document.createElement('div');
         histBlock.className = 'chart-block';
         histBlock.innerHTML = `
-          <h3>Distribution of MER outcomes</h3>
-          <p>Each bar counts how many simulated futures landed in that range. The dashed line marks your target.</p>
+          <h3>MER outcomes</h3>
+          <p>Each bar counts futures that landed in that range. Dashed line is your target.</p>
         `;
         histBlock.appendChild(histCanvas);
         resultsEl.appendChild(histBlock);
@@ -507,7 +509,7 @@ function renderMonteCarloTab(root: HTMLElement): void {
         const tornadoBlock = document.createElement('div');
         tornadoBlock.className = 'chart-block';
         tornadoBlock.innerHTML = `
-          <h3>Sensitivity — which input matters most</h3>
+          <h3>Which input matters most</h3>
           <p>${escapeHtml(GLOSSARY.tornado.short)}</p>
         `;
         tornadoBlock.appendChild(tornadoCanvas);
@@ -534,7 +536,7 @@ function renderMonteCarloTab(root: HTMLElement): void {
         w.removeEventListener('message', handler);
       } else if (msg.type === 'error') {
         const err = (msg as unknown as { error: string }).error;
-        resultsEl.innerHTML = `<div class="integrity-warn"><strong>Simulation failed.</strong><div>${escapeHtml(err)}</div></div>`;
+        resultsEl.innerHTML = `<div class="integrity-warn"><strong>Simulation failed.</strong><div>${escapeHtml(err)}</div><div class="muted" style="margin-top: 8px;">Check your inputs and try again.</div></div>`;
         runBtn.disabled = false;
         runBtn.textContent = 'Run simulation';
         w.removeEventListener('message', handler);
@@ -585,7 +587,7 @@ function renderMonteCarloTab(root: HTMLElement): void {
     const items = await listScenarios();
     items.sort((a, b) => b.createdAt - a.createdAt);
     if (items.length === 0) {
-      list.innerHTML = '<p class="muted" style="font-size: 13px;">No scenarios saved yet. Run a simulation, then click <em>Save scenario</em>.</p>';
+      list.innerHTML = '<p class="muted" style="font-size: 14px;">None yet. Run a simulation, then <em>Save scenario</em>.</p>';
       return;
     }
     for (const s of items) {
@@ -622,6 +624,29 @@ function renderMonteCarloTab(root: HTMLElement): void {
 
 function getCssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function renderEmptyState(host: HTMLElement): void {
+  host.innerHTML = `
+    <div class="empty-state">
+      <span class="label">No result yet</span>
+      <h3>Set your inputs, then run.</h3>
+      <p>The simulator will draw thousands of futures and tell you the odds of hitting your target.</p>
+    </div>
+  `;
+}
+
+function renderSkeleton(host: HTMLElement): void {
+  host.innerHTML = `
+    <div class="skeleton" aria-busy="true" aria-live="polite">
+      <div class="skeleton-row short"></div>
+      <div class="skeleton-row tall"></div>
+      <div class="skeleton-row tall"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row short"></div>
+    </div>
+  `;
 }
 
 function requiredMERSafe(): number {

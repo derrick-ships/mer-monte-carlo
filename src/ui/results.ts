@@ -38,7 +38,7 @@ export function renderResults(
     heroStat({
       label: 'Median MER',
       value: fmtMER(r.medianMER),
-      sub: `Half of futures land above; half below.`,
+      sub: 'Half of futures above; half below.',
       def: GLOSSARY.medianMER.short,
     }),
     heroStat({
@@ -54,7 +54,7 @@ export function renderResults(
   const wrap = document.createElement('div');
   wrap.className = 'chart-block';
   wrap.innerHTML = `
-    <h3>Range across all simulated futures</h3>
+    <h3>Range across all futures</h3>
     <p>${GLOSSARY.p10p90.short}</p>
   `;
   const table = document.createElement('table');
